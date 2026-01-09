@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}База знаний{% endblock %}
+
+{% block content %}
+<h2>База знаний студента</h2>
+
+<form class="row g-3 mt-3 mb-4" method="get">
+    <div class="col-auto">
+        <select class="form-select" name="type">
+            <option value="">Все типы</option>
+            <option value="deadline" {% if request.GET.type == 'deadline' %}selected{% endif %}>Дедлайны</option>
+            <option value="info" {% if request.GET.type == 'info' %}selected{% endif %}>Информация</option>
+            <option value="link" {% if request.GET.type == 'link' %}selected{% endif %}>Ссылки</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary mb-3">Фильтр</button>
+    </div>
+</form>
+
+<div class="list-group">
+    {% for entry in entries %}
+    <a href="#" class="list-group-item list-group-item-action" aria-current="true">
+        <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1">
+                {% if entry.entry_type == 'deadline' %}🚨{% elif entry.entry_type == 'link' %}🔗{% else %}ℹ️{% endif %}
+                {{ entry.get_entry_type_display }}
+            </h5>
+            <small>{{ entry.created_at|date:"d.m.Y" }}</small>
+        </div>
+        <p class="mb-1">{{ entry.content }}</p>
+        <small class="text-muted">Источник: {{ entry.source_message.chat.title }} ({{ entry.source_message.sender_name }})</small>
+    </a>
+    {% empty %}
+    <p>Записей не найдено.</p>
+    {% endfor %}
+</div>
+{% endblock %}

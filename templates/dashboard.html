@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Дашборд{% endblock %}
+
+{% block content %}
+<h2>Дашборд аналитики</h2>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-header">Всего сообщений</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ total_messages }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-header">Записей в БЗ</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ total_entries }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-header">Активных чатов</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ total_chats }}</h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <h4>Распределение категорий</h4>
+        {% if category_chart %}
+            <img src="data:image/png;base64,{{ category_chart }}" class="img-fluid" alt="Category Chart">
+        {% else %}
+            <p>Нет данных для отображения.</p>
+        {% endif %}
+    </div>
+    <div class="col-md-6">
+        <h4>Последние важные события</h4>
+        <ul class="list-group">
+            {% for entry in recent_entries %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ entry.content|truncatechars:50 }}
+                    <span class="badge bg-danger rounded-pill">{{ entry.entry_type }}</span>
+                </li>
+            {% empty %}
+                <li class="list-group-item">Нет новых событий.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

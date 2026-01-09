@@ -38,21 +38,36 @@ def process_content_task(ingestion_data_dict: dict):
                     }
                 )
 
-                # Create KnowledgeEntry if important or specific category
+                # Logic for creating Knowledge Entries
+                # 1. Main summary entry if important
                 if analysis_result.get('importance_score', 0) > 5 or \
-                   analysis_result.get('category') in ['deadline', 'announcement', 'link']:
+                   analysis_result.get('category') in ['deadline', 'announcement']:
 
                     entry_type = 'info'
+                    content = analysis_result.get('summary', '')
+
                     if analysis_result.get('category') == 'deadline':
                         entry_type = 'deadline'
-                    elif analysis_result.get('category') == 'link':
-                        entry_type = 'link'
+                        deadline_date = analysis_result.get('deadline_date')
+                        if deadline_date:
+                            content = f"{content} (Due: {deadline_date})"
 
-                    KnowledgeEntry.objects.create(
+                    # Prevent duplicate entries for the same message/type
+                    KnowledgeEntry.objects.get_or_create(
                         source_message=message,
                         entry_type=entry_type,
-                        content=analysis_result.get('summary', '')
+                        defaults={'content': content}
                     )
+
+                # 2. Extract Links as separate entries
+                extracted_links = analysis_result.get('extracted_links', [])
+                if extracted_links and isinstance(extracted_links, list):
+                    for link in extracted_links:
+                        KnowledgeEntry.objects.get_or_create(
+                            source_message=message,
+                            entry_type='link',
+                            defaults={'content': link}
+                        )
 
                 logger.info(f"Successfully processed message {message.id}")
 
@@ -61,6 +76,9 @@ def process_content_task(ingestion_data_dict: dict):
 
         else:
             # Handle other sources (Stub for now)
+            # In a real scenario, we might save this to a GenericContent model
+            # For this MVP, we just log it or maybe create a Dummy Message if needed.
+            # But the requirement is just to show we can handle it.
             logger.info(f"Processed non-telegram source: {analysis_result}")
 
     except Exception as e:

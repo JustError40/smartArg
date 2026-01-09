@@ -3,8 +3,11 @@ from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import JsonOutputParser
 from django.conf import settings
 from typing import Dict, Any, List
+import logging
 import json
 from .schemas import IngestionData
+
+logger = logging.getLogger(__name__)
 
 class PromptFactory:
     """
@@ -18,16 +21,21 @@ class PromptFactory:
                 ("system", """
 You are an intelligent assistant analyzing messages from student Telegram chats.
 Your goal is to extract important information and categorize the message.
-Determine the category: 'announcement', 'deadline', 'link', or 'other'.
-Rate importance from 0 to 10.
-Summarize the content briefly in Russian.
-Extract any links found.
-Output JSON format:
+
+Tasks:
+1. Determine the category: 'announcement', 'deadline', 'link', or 'other'.
+2. Rate importance from 0 to 10 (10 is critical, e.g., exams, immediate deadlines).
+3. Summarize the content briefly and clearly in Russian.
+4. Extract any valid HTTP/HTTPS links found in the text.
+5. If a deadline is mentioned, try to extract it as a string (e.g., "2023-10-25" or "next Friday").
+
+Output purely JSON format with no Markdown formatting:
 {{
-    "category": "...",
-    "importance_score": 0,
-    "summary": "...",
-    "extracted_links": ["url1", "url2"]
+    "category": "category_name",
+    "importance_score": integer_0_to_10,
+    "summary": "Russian summary text",
+    "extracted_links": ["url1", "url2"],
+    "deadline_date": "extracted date string or null"
 }}
                 """),
                 ("human", "Sender Role: {sender_role}\nMessage: {text}")
@@ -36,15 +44,23 @@ Output JSON format:
             return ChatPromptTemplate.from_messages([
                 ("system", """
 You are an intelligent assistant analyzing a schedule from a web page.
-Extract the schedule details.
-Output JSON format with summary and importance.
+Extract the schedule details such as subject, time, and location.
+
+Output purely JSON format with no Markdown formatting:
+{{
+    "category": "announcement",
+    "importance_score": 5,
+    "summary": "Summary of schedule updates or details in Russian",
+    "extracted_links": [],
+    "schedule_details": "Extracted details"
+}}
                 """),
                 ("human", "Content: {text}")
             ])
         else:
             # Fallback generic prompt
             return ChatPromptTemplate.from_messages([
-                ("system", "Analyze the following text and summarize it."),
+                ("system", "Analyze the following text and summarize it. Output JSON with keys: summary, category, importance_score."),
                 ("human", "{text}")
             ])
 
@@ -76,10 +92,11 @@ class AIService:
             return result
         except Exception as e:
             # Fallback in case of parsing error or API failure
-            print(f"AI Analysis failed: {e}")
+            logger.error(f"AI Analysis failed: {e}")
             return {
                 "category": "other",
                 "importance_score": 0,
-                "summary": "Analysis failed",
-                "extracted_links": []
+                "summary": "AI Analysis failed to process this message.",
+                "extracted_links": [],
+                "deadline_date": None
             }
