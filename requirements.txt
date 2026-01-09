@@ -1,0 +1,14 @@
+django>=4.2,<5.0
+psycopg2-binary
+redis
+celery
+aiogram>=3.0
+langchain
+langchain-openai
+pandas
+matplotlib
+python-dotenv
+pydantic
+gunicorn
+uvicorn
+dj-database-url
