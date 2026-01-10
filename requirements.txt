@@ -12,3 +12,7 @@ pydantic
 gunicorn
 uvicorn
 dj-database-url
+qdrant-client
+langchain-qdrant
+langchain-ollama
+langchain-ollama

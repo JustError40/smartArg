@@ -12,6 +12,7 @@ class Chat(models.Model):
     tg_chat_id = models.BigIntegerField(unique=True, verbose_name="Telegram Chat ID")
     title = models.CharField(max_length=255, blank=True, null=True, verbose_name="Chat Title")
     chat_type = models.CharField(max_length=20, choices=CHAT_TYPES, default='unknown', verbose_name="Chat Type")
+    pinned_teacher_id = models.BigIntegerField(null=True, blank=True, verbose_name="Pinned Teacher Telegram ID")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

@@ -2,8 +2,8 @@ import asyncio
 import logging
 from django.core.management.base import BaseCommand
 from bot.loader import bot, dp
-# Import handlers to register them
-import bot.handlers
+# Import handlers to register them without shadowing the Bot instance
+from bot import handlers  # noqa: F401
 
 class Command(BaseCommand):
     help = 'Runs the Telegram Bot'

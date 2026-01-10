@@ -17,6 +17,18 @@ services:
     ports:
       - "6379:6379"
 
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    volumes:
+      - qdrant_data:/qdrant/storage
+    ports:
+      - "6333:6333"
+
   web:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
@@ -30,9 +42,14 @@ services:
       - DATABASE_URL=postgres://postgres:postgres@db:5432/telegram_analyzer
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - AI_BASE_URL=http://ollama:11434/v1
+      - AI_API_KEY=ollama
+      - AI_MODEL_NAME=qwen3:8b
+      - QDRANT_URL=http://qdrant:6333
     depends_on:
       - db
       - redis
+      - qdrant
 
   worker:
     build: .
@@ -45,9 +62,14 @@ services:
       - DATABASE_URL=postgres://postgres:postgres@db:5432/telegram_analyzer
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - AI_BASE_URL=http://ollama:11434/v1
+      - AI_API_KEY=ollama
+      - AI_MODEL_NAME=qwen3:8b
+      - QDRANT_URL=http://qdrant:6333
     depends_on:
       - db
       - redis
+      - qdrant
 
   bot:
     build: .
@@ -60,7 +82,9 @@ services:
       - DATABASE_URL=postgres://postgres:postgres@db:5432/telegram_analyzer
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      # AI and Telegram credentials should be set in .env or environment
+      - AI_BASE_URL=http://ollama:11434/v1
+      - AI_API_KEY=ollama
+      - AI_MODEL_NAME=qwen3:8b
     depends_on:
       - db
       - redis
@@ -68,3 +92,5 @@ services:
 
 volumes:
   postgres_data:
+  ollama_data:
+  qdrant_data:
