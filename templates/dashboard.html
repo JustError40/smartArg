@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Дашборд — SmartArg{% endblock %}
+
+{% block content %}
+  <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between mb-4">
+    <div>
+      <h1 class="page-title mb-2">Обзор системы</h1>
+      <p class="text-muted mb-0">Сводка активности и важных сообщений из подключённых чатов.</p>
+    </div>
+    <span class="badge badge-accent mt-3 mt-lg-0 px-3 py-2">AI мониторинг активен</span>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-md-4">
+      <div class="glass-card metric-card p-4 h-100">
+        <h3>{{ total_messages }}</h3>
+        <p class="text-muted mb-0">Сообщений обработано</p>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="glass-card metric-card p-4 h-100">
+        <h3>{{ total_knowledge }}</h3>
+        <p class="text-muted mb-0">Записей в базе знаний</p>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="glass-card metric-card p-4 h-100">
+        <h3>{{ avg_importance }}</h3>
+        <p class="text-muted mb-0">Средняя важность сообщений</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-lg-5">
+      <div class="glass-card p-4 h-100">
+        <h5 class="mb-3">Недавние важные оповещения</h5>
+        {% if recent_alerts %}
+          <div class="list-group list-group-flush">
+            {% for alert in recent_alerts %}
+              <div class="list-group-item px-0">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <div class="fw-semibold">
+                      {{ alert.summary|default:alert.message.text|truncatechars:120 }}
+                    </div>
+                    <small class="text-muted">
+                      {{ alert.message.chat.title|default:"Без названия" }} · {{ alert.get_category_display }}
+                    </small>
+                  </div>
+                  <span class="badge badge-accent">{{ alert.importance_score }}</span>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-muted mb-0">Пока нет важных оповещений.</p>
+        {% endif %}
+      </div>
+    </div>
+    <div class="col-12 col-lg-7">
+      <div class="glass-card p-4 h-100">
+        <h5 class="mb-3">Аналитика по категориям</h5>
+        <img
+          class="img-fluid rounded"
+          src="data:image/png;base64,{{ pie_chart }}"
+          alt="Распределение категорий сообщений"
+        >
+      </div>
+    </div>
+  </div>
+
+  <div class="glass-card p-4">
+    <h5 class="mb-3">Активность по чатам</h5>
+    <img
+      class="img-fluid rounded"
+      src="data:image/png;base64,{{ bar_chart }}"
+      alt="Активность по чатам"
+    >
+  </div>
+{% endblock %}
