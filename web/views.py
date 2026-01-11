@@ -1,7 +1,7 @@
+from django.shortcuts import render, get_object_or_404
 from django.db.models import Avg, Count, Q
-from django.shortcuts import render
 
-from analysis.models import AnalysisResult, KnowledgeEntry
+from analysis.models import AnalysisResult, KnowledgeEntry, CourseTask
 from core.models import Chat, Message
 from .utils import generate_bar_chart, generate_pie_chart
 
@@ -64,20 +64,46 @@ def chat_list(request):
 
 
 def knowledge_base(request):
-    entry_type = request.GET.get("entry_type", "")
-    chat_id = request.GET.get("chat", "")
+    status = request.GET.get("status", "active")
+    task_type = request.GET.get("type", "")
 
-    entries = KnowledgeEntry.objects.select_related("source_message__chat").order_by("-created_at")
-    if entry_type:
-        entries = entries.filter(entry_type=entry_type)
-    if chat_id:
-        entries = entries.filter(source_message__chat_id=chat_id)
+    tasks = CourseTask.objects.order_by("-updated_at")
+    
+    if status == 'active':
+        tasks = tasks.filter(status='active')
+    elif status == 'completed':
+        tasks = tasks.filter(status='completed')
+    elif status == 'cancelled':
+        tasks = tasks.filter(status='cancelled')
+    
+    if task_type:
+        tasks = tasks.filter(task_type=task_type)
 
     context = {
-        "entries": entries,
-        "entry_types": KnowledgeEntry.ENTRY_TYPES,
-        "chats": Chat.objects.all().order_by("title"),
-        "selected_entry_type": entry_type,
-        "selected_chat": chat_id,
+        "tasks": tasks,
+        "selected_status": status,
+        "selected_type": task_type,
+        "task_types": CourseTask.TASK_TYPES,
+        "statuses": CourseTask.STATUSES,
     }
     return render(request, "knowledge_base.html", context)
+
+def task_detail(request, task_id):
+    task = get_object_or_404(CourseTask, id=task_id)
+    
+    # Get all entries related to this task
+    entries = task.entries.select_related('source_message__chat').order_by('created_at')
+    
+    deadlines = entries.filter(entry_type='deadline')
+    links = entries.filter(entry_type='link')
+    explanations = entries.filter(entry_type='explanation')
+    generic_info = entries.filter(entry_type__in=['generic', 'info'])
+    
+    context = {
+        "task": task,
+        "deadlines": deadlines,
+        "links": links,
+        "explanations": explanations,
+        "generic_info": generic_info
+    }
+    return render(request, "task_detail.html", context)

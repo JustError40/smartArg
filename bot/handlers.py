@@ -162,6 +162,10 @@ async def on_message(message: types.Message):
     # Let's stick to triggering primarily on Teacher actions, but capturing the context.
     
     if should_process:
+        reply_to_id = None
+        if message.reply_to_message:
+            reply_to_id = message.reply_to_message.message_id
+
         ingestion_data = IngestionData(
             text=context_text,
             source_type='telegram',
@@ -169,7 +173,9 @@ async def on_message(message: types.Message):
             metadata={
                 'sender_role': sender_role,
                 'chat_title': message.chat.title or 'Private',
-                'is_reply': bool(message.reply_to_message)
+                'is_reply': bool(message.reply_to_message),
+                'reply_to_msg_id': reply_to_id,
+                'tg_chat_id': message.chat.id
             }
         )
 
@@ -190,5 +196,6 @@ def save_message(message: types.Message, role: str) -> Message:
         sender_name=message.from_user.full_name if message.from_user else "Unknown",
         sender_role=role,
         text=message.text,
-        sent_at=message.date
+        sent_at=message.date,
+        reply_to_id=message.reply_to_message.message_id if message.reply_to_message else None
     )

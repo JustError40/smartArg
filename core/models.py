@@ -31,6 +31,8 @@ class Message(models.Model):
     sender_role = models.CharField(max_length=20, choices=SENDER_ROLES, default='unknown')
     text = models.TextField(blank=True, null=True)
     sent_at = models.DateTimeField(verbose_name="Sent At")
+    
+    reply_to_id = models.BigIntegerField(null=True, blank=True, verbose_name="Reply To TG Message ID")
 
     class Meta:
         unique_together = ('chat', 'tg_message_id')

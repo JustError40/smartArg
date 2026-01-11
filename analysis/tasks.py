@@ -51,10 +51,57 @@ def process_content_task(ingestion_data_dict: dict):
                 task_title = analysis_result.get('task_title')
                 summary = analysis_result.get('summary', '').strip()
                 
+                # Auto-generate title if missing but content is likely important
+                if not task_title and (importance >= 4 or category in ['deadline', 'announcement']):
+                    if category == 'deadline':
+                        extracts = analysis_result.get('extracted_deadlines', [])
+                        date_str = extracts[0].get('date', '') if extracts and isinstance(extracts, list) and isinstance(extracts[0], dict) else ''
+                        task_title = f"Дедлайн {date_str}".strip() or "Новый дедлайн"
+                    elif category == 'announcement':
+                        # Use first sentence or first few words
+                        first_line = summary.split('.')[0]
+                        task_title = (first_line[:50] + '...') if len(first_line) > 50 else first_line
+                        if not task_title:
+                            task_title = "Важное объявление"
+                    elif category == 'link':
+                         task_title = "Полезные ссылки"
+                    elif importance >= 6:
+                        task_title = "Важное сообщение"
+
                 target_task = None
                 
-                # Try to interpret task logic if it's significant
-                if task_title and (importance > 4 or category in ['deadline', 'announcement']):
+                # Context Inheritance Logic
+                reply_to_msg_id = data.metadata.get('reply_to_msg_id')
+                tg_chat_id = data.metadata.get('tg_chat_id')
+                
+                if reply_to_msg_id and tg_chat_id:
+                    try:
+                        # Find the parent message in DB. We need to filter by chat because IDs are only unique within a chat (mostly)
+                        # But wait, tg_chat_id in metadata might be different from internal chat ID.
+                        # Actually data.source_id is the internal Message.id. Message object is already fetched as 'message'.
+                        # message.chat.tg_chat_id is available.
+                        
+                        parent_msg = Message.objects.filter(
+                            tg_message_id=reply_to_msg_id,
+                            chat=message.chat
+                        ).first()
+                        
+                        if parent_msg:
+                            # Look for any task linked to this parent message
+                            related_entry = KnowledgeEntry.objects.filter(
+                                source_message=parent_msg, 
+                                course_task__isnull=False
+                            ).first()
+                            
+                            if related_entry:
+                                target_task = related_entry.course_task
+                                logger.info(f"Inherited task '{target_task.title}' from parent message {parent_msg.id}")
+                    except Exception as e:
+                        logger.warning(f"Failed to inherit task: {e}")
+
+                # Try to interpret task logic if it's significant AND we haven't found one yet
+                # Rewritten condition: If we have a title, treat it as a task candidate.
+                if not target_task and task_title: 
                     
                     # 1. Search for existing task
                     search_query = f"{task_title} {summary}"
@@ -72,22 +119,23 @@ def process_content_task(ingestion_data_dict: dict):
                             if action == 'cancel':
                                 target_task.status = 'cancelled'
                                 target_task.save()
-                            elif action == 'update':
-                                # Maybe create a knowledge entry about the update
-                                pass
+                            elif action == 'completed':
+                                target_task.status = 'completed'
+                                target_task.save()
                                 
                         except CourseTask.DoesNotExist:
                             logger.warning(f"Vector ID {vector_id} found in Qdrant but not in DB")
                     
-                    if not target_task and action in ['new', 'update', 'info']:
-                        # Create new task if it looks like a new one or we didn't find the old one to update
-                         # Use uuid for vector id
+                    if not target_task:
+                        # Create new task if not found
+                        # Use uuid for vector id
                         new_vector_id = str(uuid.uuid4())
                         target_task = CourseTask.objects.create(
                             title=task_title,
                             description=summary,
                             task_type=analysis_result.get('task_type', 'one_time'),
-                            vector_id=new_vector_id
+                            vector_id=new_vector_id,
+                            status='active'
                         )
                         
                         # Upsert to Vector DB
@@ -130,6 +178,7 @@ def process_content_task(ingestion_data_dict: dict):
                     seen_links.add(link_text)
                     KnowledgeEntry.objects.get_or_create(
                         source_message=message,
+                        course_task=target_task,
                         entry_type='link',
                         content=link_text,
                     )
@@ -161,6 +210,7 @@ def process_content_task(ingestion_data_dict: dict):
                     seen_deadlines.add(dedupe_key)
                     KnowledgeEntry.objects.get_or_create(
                         source_message=message,
+                        course_task=target_task,
                         entry_type='deadline',
                         content=content,
                     )

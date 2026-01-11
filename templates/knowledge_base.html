@@ -1,69 +1,78 @@
 {% extends "base.html" %}
 
-{% block title %}База знаний — SmartArg{% endblock %}
+{% block title %}Задачи курса — SmartArg{% endblock %}
 
 {% block content %}
   <div class="mb-4">
-    <h1 class="page-title mb-2">База знаний</h1>
-    <p class="text-muted mb-0">Структурированные записи с дедлайнами, ссылками и объявлениями.</p>
+    <h1 class="page-title mb-2">Учебные задачи</h1>
+    <p class="text-muted mb-0">Список отслеживаемых курсовых задач, лабораторных и дедлайнов.</p>
   </div>
 
   <div class="glass-card p-4 mb-4">
     <form method="get" class="row g-3 align-items-end">
       <div class="col-12 col-md-4">
-        <label class="form-label">Тип записи</label>
-        <select name="entry_type" class="form-select">
-          <option value="">Все типы</option>
-          {% for value, label in entry_types %}
-            <option value="{{ value }}" {% if value == selected_entry_type %}selected{% endif %}>
+        <label class="form-label">Статус задачи</label>
+        <select name="status" class="form-select">
+          <option value="all" {% if selected_status == 'all' %}selected{% endif %}>Все статусы</option>
+          {% for value, label in statuses %}
+            <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>
               {{ label }}
             </option>
           {% endfor %}
         </select>
       </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">Чат</label>
-        <select name="chat" class="form-select">
-          <option value="">Все чаты</option>
-          {% for chat in chats %}
-            <option value="{{ chat.id }}" {% if chat.id|stringformat:"s" == selected_chat %}selected{% endif %}>
-              {{ chat.title|default:"Без названия" }}
+      <div class="col-12 col-md-4">
+        <label class="form-label">Тип задачи</label>
+        <select name="type" class="form-select">
+          <option value="">Все типы</option>
+          {% for value, label in task_types %}
+            <option value="{{ value }}" {% if value == selected_type %}selected{% endif %}>
+              {{ label }}
             </option>
           {% endfor %}
         </select>
       </div>
-      <div class="col-12 col-md-2 d-grid">
-        <button type="submit" class="btn btn-dark">Фильтр</button>
+      <div class="col-12 col-md-4 d-grid">
+        <button type="submit" class="btn btn-dark">Применить фильтр</button>
       </div>
     </form>
   </div>
 
   <div class="glass-card p-4">
-    {% if entries %}
-      <div class="table-responsive">
-        <table class="table align-middle mb-0">
-          <thead>
-            <tr>
-              <th scope="col">Тип</th>
-              <th scope="col">Содержание</th>
-              <th scope="col">Чат</th>
-              <th scope="col">Дата</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for entry in entries %}
-              <tr>
-                <td class="text-capitalize">{{ entry.get_entry_type_display }}</td>
-                <td>{{ entry.content }}</td>
-                <td>{{ entry.source_message.chat.title|default:"Без названия" }}</td>
-                <td>{{ entry.created_at|date:"d.m.Y H:i" }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    {% if tasks %}
+      <div class="row row-cols-1 row-cols-md-2 g-4">
+        {% for task in tasks %}
+          <div class="col">
+            <div class="card h-100 border-0 shadow-sm">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <span class="badge 
+                    {% if task.status == 'active' %}bg-success{% elif task.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
+                    {{ task.get_status_display }}
+                  </span>
+                  <small class="text-muted">{{ task.get_task_type_display }}</small>
+                </div>
+                <h5 class="card-title text-primary">
+                  <a href="{% url 'task_detail' task.id %}" class="text-decoration-none stretched-link">
+                    {{ task.title }}
+                  </a>
+                </h5>
+                <p class="card-text text-truncate-3" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                  {{ task.description|default:"Нет описания" }}
+                </p>
+              </div>
+              <div class="card-footer bg-transparent border-top-0 text-muted small">
+                Обновлено: {{ task.updated_at|date:"d.m.Y H:i" }}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
       </div>
     {% else %}
-      <p class="text-muted mb-0">Записей пока нет.</p>
+      <div class="text-center py-5">
+        <p class="text-muted lead">Задач пока не найдено.</p>
+        <small>Бот автоматически создаст задачу, когда распознает соответствующее сообщение от преподавателя.</small>
+      </div>
     {% endif %}
   </div>
 {% endblock %}
